@@ -54,6 +54,14 @@ func NewServer(cfg Config) (*Server, error) {
 	router := NewRouter(apiHandler, cfg.StaticFS)
 
 	addr := fmt.Sprintf("%s:%d", cfg.Host, cfg.Port)
+	ln, err := net.Listen("tcp", addr)
+	if err != nil {
+		if demoServer != nil {
+			demoServer.Stop()
+		}
+		return nil, fmt.Errorf("failed to bind address %s: %w", addr, err)
+	}
+
 	httpSrv := &http.Server{
 		Addr:              addr,
 		Handler:           router,
@@ -63,6 +71,7 @@ func NewServer(cfg Config) (*Server, error) {
 
 	return &Server{
 		httpServer:    httpSrv,
+		listener:      ln,
 		client:        client,
 		replayManager: replayMgr,
 		demoServer:    demoServer,
@@ -70,15 +79,8 @@ func NewServer(cfg Config) (*Server, error) {
 	}, nil
 }
 
-// Start listens on configured TCP port and starts serving requests.
+// Start begins serving HTTP requests on the pre-bound TCP listener.
 func (s *Server) Start() error {
-	addr := fmt.Sprintf("%s:%d", s.config.Host, s.config.Port)
-	ln, err := net.Listen("tcp", addr)
-	if err != nil {
-		return fmt.Errorf("failed to bind address %s: %w", addr, err)
-	}
-	s.listener = ln
-
 	// Auto-connect to target or demo NATS
 	if s.config.NATSURL != "" {
 		_ = s.client.Connect(models.ConnectionConfig{
@@ -88,7 +90,7 @@ func (s *Server) Start() error {
 		})
 	}
 
-	return s.httpServer.Serve(ln)
+	return s.httpServer.Serve(s.listener)
 }
 
 // Port returns actual listening port (useful if configured as 0).

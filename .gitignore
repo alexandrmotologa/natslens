@@ -1,0 +1,20 @@
+# Binaries
+natslens
+natslens.exe
+*.exe
+
+# Node dependencies and build
+ui/node_modules/
+ui/.env.local
+
+# Go test coverage and temporary files
+*.out
+*.test
+*.prof
+
+# Logs and OS files
+*.log
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/images/logo.svg" alt="NATSLens Logo" width="160" height="160" />
+  <img src="docs/images/logo.png?raw=true" alt="NATSLens Logo" width="140" style="border-radius: 28px;" />
 </p>
 
 <h1 align="center">NATSLens</h1>

@@ -1,0 +1,288 @@
+const fs = require('fs');
+const path = require('path');
+const puppeteer = require('B:/workgit/tlslens/web/node_modules/puppeteer');
+
+function buildMascotSvg() {
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <clipPath id="squircle-clip">
+      <rect x="24" y="24" width="976" height="976" rx="220" />
+    </clipPath>
+
+    <!-- NATS JetStream Brand Accents -->
+    <linearGradient id="cyan-electric" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00f5ff"/>
+      <stop offset="100%" stop-color="#0284c7"/>
+    </linearGradient>
+
+    <linearGradient id="emerald-jet" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#34d399"/>
+      <stop offset="100%" stop-color="#059669"/>
+    </linearGradient>
+
+    <!-- Precision Low-Poly Facet Shading -->
+    <linearGradient id="f-highlight" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#94a3b8"/>
+      <stop offset="100%" stop-color="#64748b"/>
+    </linearGradient>
+
+    <linearGradient id="f-light" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#64748b"/>
+      <stop offset="100%" stop-color="#475569"/>
+    </linearGradient>
+
+    <linearGradient id="f-mid" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#334155"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+
+    <linearGradient id="f-dark" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e293b"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+
+    <linearGradient id="f-obsidian" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#060911"/>
+    </linearGradient>
+
+    <filter id="falcon-shadow" x="-15%" y="-15%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="16" stdDeviation="22" flood-color="#000000" flood-opacity="0.22" />
+    </filter>
+
+    <filter id="optic-glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="8" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- 1. Luxury White Squircle Container -->
+  <rect x="24" y="24" width="976" height="976" rx="220" fill="#ffffff" stroke="#e2e8f0" stroke-width="6" />
+
+  <g clip-path="url(#squircle-clip)">
+    <!-- Centered Coordinate Space -->
+    <g transform="translate(512, 512)" filter="url(#falcon-shadow)">
+
+      <!-- 2. Massive Hexagonal Gateway Frame -->
+      <polygon points="
+        0,-395
+        342,-198
+        342,198
+        0,395
+        -342,198
+        -342,-198
+      " fill="none" stroke="#0f172a" stroke-width="38" stroke-linejoin="round" />
+
+      <!-- Inner Dashed Telemetry Track -->
+      <polygon points="
+        0,-360
+        312,-180
+        312,180
+        0,360
+        -312,180
+        -312,-180
+      " fill="none" stroke="#10b981" stroke-width="4" opacity="0.45" stroke-dasharray="16, 12" />
+
+      <!-- Background Technical Radial Lines -->
+      <circle cx="0" cy="0" r="285" fill="none" stroke="#38bdf8" stroke-width="1.5" opacity="0.14" stroke-dasharray="6, 8" />
+      <circle cx="0" cy="0" r="195" fill="none" stroke="#10b981" stroke-width="1.5" opacity="0.16" stroke-dasharray="4, 6" />
+
+      <!-- 3. Symmetrical Origami Peregrine Falcon (Swept Predator Wings) -->
+      <!-- 100% Watertight Solid Base Silhouette -->
+      <path d="
+        M 0 -260
+        L 55 -245 L 90 -210 L 140 -200 L 225 -110 L 305 10 L 265 80 L 310 135 L 260 190 L 280 240 L 205 275 L 125 295 L 0 315
+        L -125 295 L -205 275 L -280 240 L -260 190 L -310 135 L -265 80 L -305 10 L -225 -110 L -140 -200 L -90 -210 L -55 -245
+        Z
+      " fill="#060911" />
+
+      <!-- CROWN & APEX HELMET PLATES -->
+      <polygon points="0,-260 -45,-215 0,-175" fill="url(#f-highlight)" />
+      <polygon points="0,-260 45,-215 0,-175" fill="url(#f-light)" />
+
+      <!-- Upper Temporal Angles -->
+      <polygon points="-45,-215 -105,-195 -65,-155 0,-175" fill="url(#f-light)" />
+      <polygon points="45,-215 105,-195 65,-155 0,-175" fill="url(#f-mid)" />
+
+      <!-- PREDATOR BROW SHELF (Aggressive Overhang) -->
+      <polygon points="0,-175 -65,-155 -40,-130" fill="url(#f-mid)" />
+      <polygon points="0,-175 65,-155 40,-130" fill="url(#f-dark)" />
+
+      <polygon points="-65,-155 -115,-150 -95,-125 -40,-130" fill="url(#f-dark)" />
+      <polygon points="65,-155 115,-150 95,-125 40,-130" fill="url(#f-obsidian)" />
+
+      <!-- FALCON MALAR STRIPES (Cheek Flares) -->
+      <polygon points="-105,-195 -155,-135 -115,-100 -65,-155" fill="url(#f-dark)" />
+      <polygon points="105,-195 155,-135 115,-100 65,-155" fill="url(#f-obsidian)" />
+
+      <polygon points="-155,-135 -195,-65 -145,-25 -115,-100" fill="url(#f-obsidian)" />
+      <polygon points="155,-135 195,-65 145,-25 115,-100" fill="url(#f-dark)" />
+
+      <!-- INTENSE ELECTRIC CYAN PREDATORY EYES -->
+      <!-- Left Sunk Socket -->
+      <polygon points="-95,-146 -48,-132 -54,-118 -98,-124" fill="#030508" />
+      <!-- Left Almond Lens -->
+      <polygon points="-92,-142 -52,-130 -58,-120 -95,-126" fill="url(#cyan-electric)" filter="url(#optic-glow)" />
+      <polygon points="-78,-138 -58,-131 -60,-124 -76,-128" fill="#ffffff" />
+      <!-- Left Slit Pupil -->
+      <line x1="-70" y1="-137" x2="-68" y2="-123" stroke="#030508" stroke-width="2.5" stroke-linecap="round" />
+
+      <!-- Right Sunk Socket -->
+      <polygon points="95,-146 48,-132 54,-118 98,-124" fill="#030508" />
+      <!-- Right Almond Lens -->
+      <polygon points="92,-142 52,-130 58,-120 95,-126" fill="url(#cyan-electric)" filter="url(#optic-glow)" />
+      <polygon points="78,-138 58,-131 60,-124 76,-128" fill="#ffffff" />
+      <!-- Right Slit Pupil -->
+      <line x1="70" y1="-137" x2="68" y2="-123" stroke="#030508" stroke-width="2.5" stroke-linecap="round" />
+
+      <!-- NOSE CERE / JETSTREAM BRIDGE -->
+      <polygon points="0,-175 -35,-130 0,-110" fill="#38bdf8" />
+      <polygon points="0,-175 35,-130 0,-110" fill="#0284c7" />
+
+      <!-- HOOKED PREDATOR FALCON BEAK -->
+      <polygon points="0,-110 -35,-130 -28,-55 0,-5" fill="url(#f-light)" />
+      <polygon points="0,-110 35,-130 28,-55 0,-5" fill="url(#f-mid)" />
+
+      <!-- Curving Hooked Tomial Tip -->
+      <polygon points="0,-5 -28,-55 -8,15 0,30" fill="#1e293b" />
+      <polygon points="0,-5 28,-55 8,15 0,30" fill="#0f172a" />
+      <polygon points="0,-5 -8,15 0,30" fill="#475569" />
+      <polygon points="0,-5 8,15 0,30" fill="#1e293b" />
+
+      <!-- THROAT & JUGULAR CHEVRONS -->
+      <polygon points="0,30 -55,-10 -45,65 0,95" fill="url(#f-mid)" />
+      <polygon points="0,30 55,-10 45,65 0,95" fill="url(#f-dark)" />
+
+      <polygon points="-55,-10 -130,-5 -105,75 -45,65" fill="url(#f-dark)" />
+      <polygon points="55,-10 130,-5 105,75 45,65" fill="url(#f-obsidian)" />
+
+      <!-- BREASTPLATE ARMOR (Observability Core Carrier) -->
+      <polygon points="0,95 -45,65 -85,145 0,190" fill="url(#f-light)" />
+      <polygon points="0,95 45,65 85,145 0,190" fill="url(#f-mid)" />
+
+      <polygon points="-45,65 -105,75 -145,155 -85,145" fill="url(#f-mid)" />
+      <polygon points="45,65 105,75 145,155 85,145" fill="url(#f-dark)" />
+
+      <!-- ABDOMINAL PLATES -->
+      <polygon points="0,190 -85,145 -65,245 0,285" fill="url(#f-mid)" />
+      <polygon points="0,190 85,145 65,245 0,285" fill="url(#f-dark)" />
+
+      <polygon points="0,285 -65,245 -30,305 0,315" fill="url(#f-dark)" />
+      <polygon points="0,285 65,245 30,305 0,315" fill="url(#f-obsidian)" />
+
+      <!-- DYNAMIC FLIGHT WING PRIMARY FEATHERS (Outer Sweep) -->
+      <!-- Left Wing Feather Tiers -->
+      <!-- Tier 1: High Sweep -->
+      <polygon points="-140,-200 -225,-110 -185,-65 -125,-120" fill="url(#f-light)" />
+      <polygon points="-225,-110 -305,10 -235,55 -185,-65" fill="url(#f-highlight)" />
+
+      <!-- Tier 2: Mid Primary -->
+      <polygon points="-185,-65 -235,55 -265,80 -195,95" fill="url(#f-mid)" />
+      <polygon points="-235,55 -310,135 -245,165 -265,80" fill="url(#f-light)" />
+
+      <!-- Tier 3: Low Primary -->
+      <polygon points="-265,80 -245,165 -260,190 -195,185" fill="url(#f-dark)" />
+      <polygon points="-245,165 -280,240 -205,245 -260,190" fill="url(#f-mid)" />
+
+      <!-- Inner Flank Fillers -->
+      <polygon points="-195,95 -195,185 -145,155 -105,75" fill="url(#f-obsidian)" />
+      <polygon points="-195,185 -205,245 -145,265 -145,155" fill="url(#f-dark)" />
+      <polygon points="-205,245 -205,275 -125,295 -145,265" fill="url(#f-obsidian)" />
+
+      <!-- Right Wing Feather Tiers (Symmetrical Mirror) -->
+      <!-- Tier 1: High Sweep -->
+      <polygon points="140,-200 225,-110 185,-65 125,-120" fill="url(#f-mid)" />
+      <polygon points="225,-110 305,10 235,55 185,-65" fill="url(#f-light)" />
+
+      <!-- Tier 2: Mid Primary -->
+      <polygon points="185,-65 235,55 265,80 195,95" fill="url(#f-dark)" />
+      <polygon points="235,55 310,135 245,165 265,80" fill="url(#f-mid)" />
+
+      <!-- Tier 3: Low Primary -->
+      <polygon points="265,80 245,165 260,190 195,185" fill="url(#f-obsidian)" />
+      <polygon points="245,165 280,240 205,245 260,190" fill="url(#f-dark)" />
+
+      <!-- Inner Flank Fillers -->
+      <polygon points="195,95 195,185 145,155 105,75" fill="url(#f-dark)" />
+      <polygon points="195,185 205,245 145,265 145,155" fill="url(#f-obsidian)" />
+      <polygon points="205,245 205,275 125,295 145,265" fill="url(#f-dark)" />
+
+      <!-- JETSTREAM OBSERVABILITY CORE (Central Chest Aperture) -->
+      <!-- Emerald Hex Housing -->
+      <polygon points="
+        0,115
+        26,130
+        26,160
+        0,175
+        -26,160
+        -26,130
+      " fill="#060911" stroke="url(#emerald-jet)" stroke-width="4.5" />
+
+      <!-- Cyan Sensor Pupil -->
+      <circle cx="0" cy="145" r="16" fill="url(#cyan-electric)" filter="url(#optic-glow)" />
+      <circle cx="0" cy="145" r="7" fill="#ffffff" />
+
+      <!-- Telemetry Horizon Whiskers -->
+      <line x1="-16" y1="145" x2="-44" y2="145" stroke="#34d399" stroke-width="3" stroke-linecap="round" />
+      <line x1="16" y1="145" x2="44" y2="145" stroke="#38bdf8" stroke-width="3" stroke-linecap="round" />
+      <circle cx="-44" cy="145" r="3" fill="#34d399" />
+      <circle cx="44" cy="145" r="3" fill="#38bdf8" />
+
+    </g>
+  </g>
+</svg>`;
+}
+
+async function render() {
+  const targetDir = path.resolve(__dirname, '../docs/images');
+  if (!fs.existsSync(targetDir)) fs.mkdirSync(targetDir, { recursive: true });
+
+  const svg = buildMascotSvg();
+  const svgPath = path.join(targetDir, 'logo.svg');
+  const pngPath = path.join(targetDir, 'logo.png');
+
+  fs.writeFileSync(svgPath, svg, 'utf8');
+  console.log('✓ Successfully written docs/images/logo.svg');
+
+  console.log('Rendering 1024x1024 high-DPI logo.png via Puppeteer...');
+  const browser = await puppeteer.launch({
+    headless: 'new',
+    args: ['--no-sandbox', '--disable-setuid-sandbox'],
+  });
+
+  const page = await browser.newPage();
+  await page.setViewport({ width: 1024, height: 1024, deviceScaleFactor: 2 });
+  await page.setContent(`
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body {
+            width: 1024px;
+            height: 1024px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: transparent;
+          }
+          svg { width: 1024px; height: 1024px; }
+        </style>
+      </head>
+      <body>${svg}</body>
+    </html>
+  `);
+
+  await page.screenshot({
+    path: pngPath,
+    omitBackground: true,
+  });
+
+  await browser.close();
+  console.log('✓ Successfully rendered docs/images/logo.png');
+}
+
+render().catch(err => {
+  console.error(err);
+  process.exit(1);
+});

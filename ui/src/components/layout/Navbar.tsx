@@ -1,5 +1,5 @@
 import React from 'react';
-import { RefreshCw, Activity, Cpu, ArrowDownLeft, ArrowUpRight, Search } from 'lucide-react';
+import { RefreshCw, Activity, Cpu, ArrowDownLeft, ArrowUpRight, Search, Menu } from 'lucide-react';
 import { ClusterStats } from '../../lib/types';
 import { formatBytes, formatNumber } from '../../lib/utils';
 import { NavTab } from './Sidebar';
@@ -12,6 +12,7 @@ interface NavbarProps {
   onPrimaryAction?: () => void;
   primaryActionLabel?: string;
   onOpenCommandPalette?: () => void;
+  onToggleMobileMenu?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -22,6 +23,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onPrimaryAction,
   primaryActionLabel,
   onOpenCommandPalette,
+  onToggleMobileMenu,
 }) => {
   const getTabTitle = () => {
     switch (currentTab) {
@@ -55,25 +57,45 @@ export const Navbar: React.FC<NavbarProps> = ({
   const { title, sub } = getTabTitle();
 
   return (
-    <header className="h-16 px-6 bg-[#0D1322]/80 backdrop-blur-md border-b border-slate-800/80 flex items-center justify-between sticky top-0 z-30">
-      <div>
-        <h1 className="text-base font-semibold text-white tracking-tight">{title}</h1>
-        <p className="text-xs text-slate-400 hidden sm:block">{sub}</p>
+    <header className="h-16 px-4 sm:px-6 bg-[#0D1322]/80 backdrop-blur-md border-b border-slate-800/80 flex items-center justify-between sticky top-0 z-30">
+      <div className="flex items-center gap-3 min-w-0">
+        {onToggleMobileMenu && (
+          <button
+            onClick={onToggleMobileMenu}
+            className="lg:hidden p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors shrink-0"
+            title="Toggle Menu"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+        )}
+        <div className="min-w-0">
+          <h1 className="text-sm sm:text-base font-semibold text-white tracking-tight truncate">{title}</h1>
+          <p className="text-xs text-slate-400 hidden sm:block truncate">{sub}</p>
+        </div>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 sm:gap-3 shrink-0">
         {/* Global Command Palette Trigger */}
         {onOpenCommandPalette && (
-          <button
-            onClick={onOpenCommandPalette}
-            className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-[#111827] hover:bg-slate-800 border border-slate-800 hover:border-slate-700 rounded-lg text-xs text-slate-400 hover:text-slate-200 transition-colors shadow-sm"
-          >
-            <Search className="w-3.5 h-3.5 text-teal-400" />
-            <span>Search anything...</span>
-            <kbd className="ml-1 px-1.5 py-0.5 bg-slate-900 border border-slate-700/80 rounded text-[10px] font-mono text-slate-300">
-              Ctrl+K
-            </kbd>
-          </button>
+          <>
+            <button
+              onClick={onOpenCommandPalette}
+              className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-[#111827] hover:bg-slate-800 border border-slate-800 hover:border-slate-700 rounded-lg text-xs text-slate-400 hover:text-slate-200 transition-colors shadow-sm"
+            >
+              <Search className="w-3.5 h-3.5 text-teal-400" />
+              <span>Search anything...</span>
+              <kbd className="ml-1 px-1.5 py-0.5 bg-slate-900 border border-slate-700/80 rounded text-[10px] font-mono text-slate-300">
+                Ctrl+K
+              </kbd>
+            </button>
+            <button
+              onClick={onOpenCommandPalette}
+              className="sm:hidden p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
+              title="Search anything (Ctrl+K)"
+            >
+              <Search className="w-4 h-4 text-teal-400" />
+            </button>
+          </>
         )}
         {/* Real-time Cluster Pill */}
         {stats && (

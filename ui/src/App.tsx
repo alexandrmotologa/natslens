@@ -57,6 +57,7 @@ export const App: React.FC = () => {
   const [isCreateStreamModalOpen, setIsCreateStreamModalOpen] = useState(false);
   const [isCreateConsumerModalOpen, setIsCreateConsumerModalOpen] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isDemoLoading, setIsDemoLoading] = useState(false);
@@ -255,6 +256,8 @@ export const App: React.FC = () => {
         onStartDemo={handleStartDemo}
         isDemoLoading={isDemoLoading}
         dlqCount={dlqCount}
+        isMobileOpen={isMobileMenuOpen}
+        onCloseMobile={() => setIsMobileMenuOpen(false)}
       />
 
       {/* Main Content Area */}
@@ -265,6 +268,7 @@ export const App: React.FC = () => {
           onRefresh={refreshAllData}
           isRefreshing={isRefreshing}
           onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
+          onToggleMobileMenu={() => setIsMobileMenuOpen((prev) => !prev)}
           primaryActionLabel={
             currentTab === 'streams' && !selectedStreamDetail
               ? '+ New Stream'

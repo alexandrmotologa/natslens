@@ -15,6 +15,7 @@ import {
   FileCode2,
   Flame,
   BellRing,
+  X,
 } from 'lucide-react';
 import { ClusterStats, ConnectionConfig } from '../../lib/types';
 
@@ -42,6 +43,8 @@ interface SidebarProps {
   onStartDemo: () => void;
   isDemoLoading: boolean;
   dlqCount?: number;
+  isMobileOpen?: boolean;
+  onCloseMobile?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -54,6 +57,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onStartDemo,
   isDemoLoading,
   dlqCount,
+  isMobileOpen = false,
+  onCloseMobile,
 }) => {
   const navItems: { id: NavTab; label: string; icon: React.FC<{ className?: string }>; badge?: number; badgeColor?: string }[] = [
     { id: 'cluster', label: 'Cluster Overview', icon: Activity },
@@ -87,47 +92,73 @@ export const Sidebar: React.FC<SidebarProps> = ({
   ];
 
   return (
-    <aside className="w-64 bg-[#0D1322] border-r border-slate-800/80 flex flex-col h-screen sticky top-0 shrink-0">
-      {/* Brand Header */}
-      <div className="p-4 border-b border-slate-800/80 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-[#27AEE4] to-indigo-600 flex items-center justify-center shadow-lg shadow-teal-500/10 font-mono font-bold text-white text-base">
-            NL
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="font-semibold text-white tracking-tight text-base">NATSLens</span>
-              <span className="px-1.5 py-0.5 text-[10px] font-medium bg-teal-500/10 text-teal-400 border border-teal-500/20 rounded">
-                v0.1.0
-              </span>
-            </div>
-            <p className="text-[11px] text-slate-400">JetStream Observability</p>
-          </div>
-        </div>
-      </div>
+    <>
+      {/* Mobile Backdrop */}
+      {isMobileOpen && (
+        <div
+          className="fixed inset-0 bg-black/70 backdrop-blur-sm z-40 lg:hidden transition-opacity"
+          onClick={onCloseMobile}
+        />
+      )}
 
-      {/* Navigation Links */}
-      <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-        <div className="px-3 py-1.5 text-[10px] font-semibold text-slate-400 tracking-wider uppercase">
-          Studio Navigation
-        </div>
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          const isActive = currentTab === item.id;
-          return (
-            <button
-              key={item.id}
-              onClick={() => onSelectTab(item.id)}
-              className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150 ${
-                isActive
-                  ? 'bg-teal-500/10 text-teal-300 border border-teal-500/30 shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-              }`}
-            >
-              <div className="flex items-center gap-2.5">
-                <Icon className={`w-4 h-4 ${isActive ? 'text-teal-400' : 'text-slate-400'}`} />
-                <span>{item.label}</span>
+      {/* Sidebar Container */}
+      <aside
+        className={`fixed lg:sticky top-0 inset-y-0 left-0 z-50 w-64 bg-[#0D1322] border-r border-slate-800/80 flex flex-col h-screen shrink-0 transition-transform duration-200 ease-in-out ${
+          isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+        }`}
+      >
+        {/* Brand Header */}
+        <div className="p-4 border-b border-slate-800/80 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-[#27AEE4] to-indigo-600 flex items-center justify-center shadow-lg shadow-teal-500/10 font-mono font-bold text-white text-base">
+              NL
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-white tracking-tight text-base">NATSLens</span>
+                <span className="px-1.5 py-0.5 text-[10px] font-medium bg-teal-500/10 text-teal-400 border border-teal-500/20 rounded">
+                  v0.1.0
+                </span>
               </div>
+              <p className="text-[11px] text-slate-400">JetStream Observability</p>
+            </div>
+          </div>
+          {onCloseMobile && (
+            <button
+              onClick={onCloseMobile}
+              className="lg:hidden p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
+              title="Close menu"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          )}
+        </div>
+
+        {/* Navigation Links */}
+        <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
+          <div className="px-3 py-1.5 text-[10px] font-semibold text-slate-400 tracking-wider uppercase">
+            Studio Navigation
+          </div>
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = currentTab === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => {
+                  onSelectTab(item.id);
+                  if (onCloseMobile) onCloseMobile();
+                }}
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150 ${
+                  isActive
+                    ? 'bg-teal-500/10 text-teal-300 border border-teal-500/30 shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <Icon className={`w-4 h-4 ${isActive ? 'text-teal-400' : 'text-slate-400'}`} />
+                  <span>{item.label}</span>
+                </div>
               {item.badge !== undefined && item.badge > 0 && (
                 <span
                   className={`text-xs px-2 py-0.5 rounded-full font-mono ${
@@ -187,5 +218,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
       </div>
     </aside>
+  </>
   );
 };

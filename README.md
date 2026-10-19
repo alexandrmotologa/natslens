@@ -35,6 +35,7 @@ NATSLens delivers a self-contained, high-performance web studio compiled into a 
 - Displays stream storage allocations, retention configurations (Limits, Interest, WorkQueue), deduplication windows, and discarded policy mechanics.
 - Inspects real message payloads, structured JSON trees, timestamps, and sequence numbers.
 - Deletes individual sequence records or purges entire streams.
+- Exports stream message slices to portable JSON snapshots.
 
 ### 2. Real-Time Consumer Lag & Redelivery Heatmap
 - Computes pending message counts across all durable and ephemeral consumers.
@@ -42,23 +43,51 @@ NATSLens delivers a self-contained, high-performance web studio compiled into a 
 - Tracks redelivery ratios to detect poison pills, unhandled panics, and stalled worker goroutines before queue buildup cascades into outages.
 - Supports consumer lifecycle operations: create push/pull consumers, pause message delivery, resume consumption, or delete consumers.
 
-### 3. JetStream Key-Value & ObjectStore Workbench
+### 3. Visual Topology & Dataflow Graph
+- Automatically constructs an interactive SVG dataflow graph of your NATS cluster.
+- Maps the path from External Ingress through Wildcard Subjects, JetStream Streams, Durable Consumers, and Active Worker Groups.
+- Visualizes message throughput counters and flags degraded consumer nodes directly in the graph layout.
+
+### 4. Poison Pill Quarantine & Dead Letter Queue (DLQ)
+- Scans streams for messages that have breached delivery thresholds or caused repeated worker failures.
+- Quarantines poison pills in an isolated inspection workbench.
+- Provides an in-place JSON payload repair editor to fix invalid schemas or corrupt payloads.
+- Re-publishes repaired messages back to original or alternative subjects with automated original acking.
+
+### 5. Schema Registry & Live Payload Validator
+- Centralized repository of JSON Schema contracts bound to NATS subject patterns (`orders.*`, `telemetry.>`).
+- Pattern-matching engine that resolves concrete message subjects against schema bindings.
+- Interactive validator playground to test JSON payloads against schemas with pinpoint error reporting.
+
+### 6. Traffic Generator & Chaos Studio
+- Configurable synthetic load generator for continuous stress testing of streams and consumers.
+- Dynamic template variables (`{{uuid}}`, `{{now}}`, `{{random_int}}`, `{{subject}}`) for realistic message generation.
+- Built-in chaos engineering knobs: inject configurable latency jitter, payload corruption ratios, and error header flags.
+
+### 7. Alerts Engine & Prometheus Exporter
+- Native `/metrics` endpoint exporting Prometheus text-format metrics for streams, consumers, lag, and redeliveries.
+- Configurable threshold alert rules evaluating consumer lag, AckWait timeouts, and unacknowledged messages.
+- Webhook notification engine supporting Slack, Discord, and generic JSON webhook destinations with incident logs.
+
+### 8. JetStream Key-Value & ObjectStore Workbench
 - Explores keys, revisions, and raw values across native NATS Key-Value buckets.
 - Tracks revision history per key with byte-level delta inspection.
 - Provides real-time Server-Sent Events (SSE) updates as keys are mutated or marked deleted.
+- Supports one-click JSON snapshot export and full bucket import.
 - Manages NATS ObjectStore buckets with direct file upload, metadata tracking, download, and deletion.
 
-### 4. Message Studio, Deduplication & Stream Replay Engine
+### 9. Message Studio, Deduplication & Stream Replay Engine
 - Publishes test messages to any subject with custom header injectors, including `Nats-Msg-Id` for JetStream deduplication testing.
 - Sets expected stream headers (`Nats-Expected-Stream`, `Nats-Expected-Last-Seq`, `Nats-Expected-Last-Msg-Id`) for deterministic testing.
 - Replays historic streams starting from sequence IDs, absolute timestamps, or specific delta windows.
 - Paces replay delivery with selectable playback speeds (1x, 2x, 5x, 10x, or unthrottled maximum throughput).
 
-### 5. Core NATS Live Tap & Request-Reply Latency Probe
+### 10. Core NATS Live Tap, Probe & Command Palette
 - Sniffs raw subject traffic across Core NATS with live pattern filtering and wildcard subscription support.
 - Runs synchronous request-reply probes with nanosecond latency round-trip measurements.
+- Universal Command Palette (`Ctrl+K` / `Cmd+K`) for rapid navigation across streams, consumers, KV buckets, and studio actions.
 
-### 6. Zero-Dependency In-Process Demo Cluster
+### 11. Zero-Dependency In-Process Demo Cluster
 - Bundles a full in-memory NATS JetStream server (`natslens demo`).
 - Pre-seeds active streams (`ORDERS`, `PAYMENTS`, `TELEMETRY`), durable consumers, KV buckets (`app-config`, `rate-limits`), and ObjectStore buckets (`documents`).
 - Continuously generates live synthetic event traffic for instant evaluation without external infrastructure.
@@ -71,6 +100,13 @@ NATSLens delivers a self-contained, high-performance web studio compiled into a 
   <img src="docs/images/natslens-1.png" alt="NATSLens Cluster Overview & JetStream Storage Engine" width="90%" />
 </p>
 <p align="center"><em>Cluster Overview: Cluster metrics, connections, and JetStream storage allocation limits.</em></p>
+
+<br />
+
+<p align="center">
+  <img src="docs/images/natslens-5.png" alt="NATSLens Visual Topology Graph" width="90%" />
+</p>
+<p align="center"><em>Topology Graph: Interactive SVG map of ingress, subjects, streams, consumers, and workers.</em></p>
 
 <br />
 
@@ -91,14 +127,42 @@ NATSLens delivers a self-contained, high-performance web studio compiled into a 
 <p align="center">
   <img src="docs/images/natslens-4.png" alt="NATSLens Key-Value Workbench" width="90%" />
 </p>
-<p align="center"><em>Key-Value Workbench: Key inspection, mutation tracking, and historical revision logs.</em></p>
+<p align="center"><em>Key-Value Workbench: Key inspection, mutation tracking, historical revisions, and JSON import/export.</em></p>
 
 <br />
 
 <p align="center">
-  <img src="docs/images/natslens-5.png" alt="NATSLens Message Studio & Stream Replay" width="90%" />
+  <img src="docs/images/natslens-6.png" alt="NATSLens Poison Pill DLQ Workbench" width="90%" />
 </p>
-<p align="center"><em>Message Studio & Stream Replay: Controlled stream replay pacing and message publishing.</em></p>
+<p align="center"><em>Poison Pill DLQ: Quarantined failed messages, in-place JSON repair editor, and re-publishing.</em></p>
+
+<br />
+
+<p align="center">
+  <img src="docs/images/natslens-7.png" alt="NATSLens Schema Registry" width="90%" />
+</p>
+<p align="center"><em>Schema Registry: JSON Schema contracts, wildcard subject bindings, and live validator playground.</em></p>
+
+<br />
+
+<p align="center">
+  <img src="docs/images/natslens-8.png" alt="NATSLens Traffic & Chaos Studio" width="90%" />
+</p>
+<p align="center"><em>Traffic Studio: Synthetic load generation with template variables and chaos fault injection knobs.</em></p>
+
+<br />
+
+<p align="center">
+  <img src="docs/images/natslens-9.png" alt="NATSLens Alerts & Prometheus Metrics" width="90%" />
+</p>
+<p align="center"><em>Alerts Engine: Threshold rules, incident event log, and raw /metrics Prometheus scraper endpoint.</em></p>
+
+<br />
+
+<p align="center">
+  <img src="docs/images/natslens-10.png" alt="NATSLens Global Command Palette" width="90%" />
+</p>
+<p align="center"><em>Command Palette: Universal quick-switcher (Ctrl+K) across streams, consumers, buckets, and actions.</em></p>
 
 ---
 
@@ -239,6 +303,25 @@ NATSLens exposes a structured JSON API consumed by the frontend and available fo
 | `/api/tap` | `GET` | SSE stream for live Core NATS packet capture |
 | `/api/probe` | `POST` | Run synchronous request-reply probe with latency timer |
 | `/api/events` | `GET` | SSE stream of cluster-wide events and statistics |
+| `/metrics` | `GET` | Prometheus text-format metric scrape endpoint |
+| `/api/topology` | `GET` | Live dataflow graph (Ingress, Subjects, Streams, Consumers, Workers) |
+| `/api/schemas` | `GET`, `POST` | List or register JSON Schema contracts |
+| `/api/schemas/{id}` | `GET`, `DELETE` | Read or delete schema contract definition |
+| `/api/schemas/validate` | `POST` | Validate JSON payload against matched subject schema |
+| `/api/dlq` | `GET` | List quarantined poison pills and failed delivery messages |
+| `/api/dlq/scan` | `POST` | Trigger stream scan for stuck messages |
+| `/api/dlq/republish` | `POST` | In-place payload repair and automated re-publish |
+| `/api/dlq/{id}` | `DELETE` | Purge quarantined poison pill from dead letter list |
+| `/api/traffic/start` | `POST` | Launch synthetic traffic generator with chaos injection |
+| `/api/traffic/stop` | `POST` | Stop active synthetic load test session |
+| `/api/traffic/sessions` | `GET` | List running traffic generator sessions |
+| `/api/alerts/rules` | `GET`, `POST` | List or register threshold alert rules |
+| `/api/alerts/rules/{id}` | `DELETE` | Delete threshold alert rule |
+| `/api/alerts/events` | `GET` | Incident log of triggered threshold alert events |
+| `/api/alerts/test` | `POST` | Test webhook notification (Slack, Discord, generic JSON) |
+| `/api/streams/{name}/export` | `GET` | Export stream message slice to portable JSON snapshot |
+| `/api/kv/{bucket}/export` | `GET` | Export full Key-Value bucket snapshot to JSON |
+| `/api/kv/{bucket}/import` | `POST` | Import Key-Value bucket snapshot from JSON |
 
 ---
 

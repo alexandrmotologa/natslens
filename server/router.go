@@ -13,6 +13,11 @@ import (
 func NewRouter(h *handlers.APIHandler, staticFS fs.FS) http.Handler {
 	mux := http.NewServeMux()
 
+	// Prometheus Metrics Endpoint
+	mux.HandleFunc("/metrics", func(w http.ResponseWriter, r *http.Request) {
+		h.PrometheusMetrics(w, r)
+	})
+
 	// API Route Dispatcher
 	mux.HandleFunc("/api/", func(w http.ResponseWriter, r *http.Request) {
 		path := r.URL.Path
@@ -34,6 +39,96 @@ func NewRouter(h *handlers.APIHandler, staticFS fs.FS) http.Handler {
 		case path == "/api/demo/start":
 			if r.Method == http.MethodPost {
 				h.StartDemoCluster(w, r)
+			} else {
+				handlers.WriteError(w, http.StatusMethodNotAllowed, "method not allowed")
+			}
+
+		// Topology
+		case path == "/api/topology":
+			h.GetTopology(w, r)
+
+		// Schema Registry
+		case path == "/api/schemas":
+			if r.Method == http.MethodGet {
+				h.ListSchemas(w, r)
+			} else if r.Method == http.MethodPost {
+				h.SaveSchema(w, r)
+			} else {
+				handlers.WriteError(w, http.StatusMethodNotAllowed, "method not allowed")
+			}
+		case path == "/api/schemas/validate":
+			if r.Method == http.MethodPost {
+				h.ValidatePayload(w, r)
+			} else {
+				handlers.WriteError(w, http.StatusMethodNotAllowed, "method not allowed")
+			}
+		case strings.HasPrefix(path, "/api/schemas/"):
+			if r.Method == http.MethodDelete {
+				h.DeleteSchema(w, r)
+			} else {
+				handlers.WriteError(w, http.StatusMethodNotAllowed, "method not allowed")
+			}
+
+		// DLQ & Poison Pills
+		case path == "/api/dlq":
+			h.ListDLQMessages(w, r)
+		case path == "/api/dlq/scan":
+			if r.Method == http.MethodPost {
+				h.ScanDLQ(w, r)
+			} else {
+				handlers.WriteError(w, http.StatusMethodNotAllowed, "method not allowed")
+			}
+		case strings.HasPrefix(path, "/api/dlq/"):
+			if strings.HasSuffix(path, "/republish") {
+				if r.Method == http.MethodPost {
+					h.RepublishDLQ(w, r)
+				} else {
+					handlers.WriteError(w, http.StatusMethodNotAllowed, "method not allowed")
+				}
+			} else if r.Method == http.MethodDelete {
+				h.PurgeDLQ(w, r)
+			} else if r.Method == http.MethodGet {
+				h.GetDLQMessage(w, r)
+			} else {
+				handlers.WriteError(w, http.StatusMethodNotAllowed, "method not allowed")
+			}
+
+		// Traffic Studio
+		case path == "/api/traffic/start":
+			if r.Method == http.MethodPost {
+				h.StartTraffic(w, r)
+			} else {
+				handlers.WriteError(w, http.StatusMethodNotAllowed, "method not allowed")
+			}
+		case path == "/api/traffic/sessions":
+			h.ListTraffic(w, r)
+		case strings.HasPrefix(path, "/api/traffic/") && strings.HasSuffix(path, "/stop"):
+			if r.Method == http.MethodPost {
+				h.StopTraffic(w, r)
+			} else {
+				handlers.WriteError(w, http.StatusMethodNotAllowed, "method not allowed")
+			}
+
+		// Alerts & Webhooks
+		case path == "/api/alerts/rules":
+			if r.Method == http.MethodGet {
+				h.ListAlertRules(w, r)
+			} else if r.Method == http.MethodPost {
+				h.SaveAlertRule(w, r)
+			} else {
+				handlers.WriteError(w, http.StatusMethodNotAllowed, "method not allowed")
+			}
+		case strings.HasPrefix(path, "/api/alerts/rules/"):
+			if r.Method == http.MethodDelete {
+				h.DeleteAlertRule(w, r)
+			} else {
+				handlers.WriteError(w, http.StatusMethodNotAllowed, "method not allowed")
+			}
+		case path == "/api/alerts/events":
+			h.ListAlertEvents(w, r)
+		case path == "/api/alerts/test":
+			if r.Method == http.MethodPost {
+				h.TestWebhook(w, r)
 			} else {
 				handlers.WriteError(w, http.StatusMethodNotAllowed, "method not allowed")
 			}
@@ -170,6 +265,9 @@ func handleStreamsSubroute(h *handlers.APIHandler, w http.ResponseWriter, r *htt
 	path := r.URL.Path
 
 	switch {
+	case strings.HasSuffix(path, "/export"):
+		h.ExportStream(w, r)
+
 	case strings.HasSuffix(path, "/purge"):
 		if r.Method == http.MethodPost {
 			h.PurgeStream(w, r)
@@ -225,6 +323,16 @@ func handleKVSubroute(h *handlers.APIHandler, w http.ResponseWriter, r *http.Req
 	path := r.URL.Path
 
 	switch {
+	case strings.HasSuffix(path, "/export"):
+		h.ExportKV(w, r)
+
+	case strings.HasSuffix(path, "/import"):
+		if r.Method == http.MethodPost {
+			h.ImportKV(w, r)
+		} else {
+			handlers.WriteError(w, http.StatusMethodNotAllowed, "method not allowed")
+		}
+
 	case strings.HasSuffix(path, "/watch"):
 		h.WatchKVBucket(w, r)
 

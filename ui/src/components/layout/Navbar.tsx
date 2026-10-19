@@ -1,5 +1,5 @@
 import React from 'react';
-import { RefreshCw, Activity, Cpu, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
+import { RefreshCw, Activity, Cpu, ArrowDownLeft, ArrowUpRight, Search } from 'lucide-react';
 import { ClusterStats } from '../../lib/types';
 import { formatBytes, formatNumber } from '../../lib/utils';
 import { NavTab } from './Sidebar';
@@ -11,6 +11,7 @@ interface NavbarProps {
   isRefreshing: boolean;
   onPrimaryAction?: () => void;
   primaryActionLabel?: string;
+  onOpenCommandPalette?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -20,17 +21,28 @@ export const Navbar: React.FC<NavbarProps> = ({
   isRefreshing,
   onPrimaryAction,
   primaryActionLabel,
+  onOpenCommandPalette,
 }) => {
   const getTabTitle = () => {
     switch (currentTab) {
       case 'cluster':
         return { title: 'Cluster Overview', sub: 'Server diagnostics, connections, and JetStream engine limits' };
+      case 'topology':
+        return { title: 'Visual Topology & Dataflow Graph', sub: 'Interactive map of publishers, ingress subjects, JetStream streams, consumers, and workers' };
       case 'streams':
         return { title: 'Stream & Subject Hierarchy Visualizer', sub: 'Inspect stream retention, storage allocation, and subject tree breakdown' };
       case 'consumers':
         return { title: 'Real-Time Consumer Lag & Redelivery Heatmap', sub: 'Monitor unacknowledged queues, redelivery ratios, and AckWait timeouts' };
       case 'kv':
         return { title: 'JetStream Key-Value Workbench', sub: 'Explore buckets, edit values, view revision history, and watch live mutations' };
+      case 'dlq':
+        return { title: 'Poison Pill Quarantine & DLQ Workbench', sub: 'Inspect failed messages, diagnose unparseable payloads, edit JSON in-place, and re-publish' };
+      case 'schemas':
+        return { title: 'Schema Registry & Live Payload Validator', sub: 'Define JSON Schema contracts, bind to wildcard subjects, and validate message payloads' };
+      case 'traffic':
+        return { title: 'Traffic Generator & Chaos Studio', sub: 'Inject synthetic loads, evaluate dynamic template variables, and simulate cluster faults' };
+      case 'alerts':
+        return { title: 'Alerts Engine & Prometheus Exporter', sub: 'Configure threshold rules for consumer lag and redeliveries with webhook notifications' };
       case 'objectstore':
         return { title: 'JetStream ObjectStore Explorer', sub: 'Manage chunked binary storage, schemas, configurations, and files' };
       case 'studio':
@@ -50,6 +62,19 @@ export const Navbar: React.FC<NavbarProps> = ({
       </div>
 
       <div className="flex items-center gap-3">
+        {/* Global Command Palette Trigger */}
+        {onOpenCommandPalette && (
+          <button
+            onClick={onOpenCommandPalette}
+            className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-[#111827] hover:bg-slate-800 border border-slate-800 hover:border-slate-700 rounded-lg text-xs text-slate-400 hover:text-slate-200 transition-colors shadow-sm"
+          >
+            <Search className="w-3.5 h-3.5 text-teal-400" />
+            <span>Search anything...</span>
+            <kbd className="ml-1 px-1.5 py-0.5 bg-slate-900 border border-slate-700/80 rounded text-[10px] font-mono text-slate-300">
+              Ctrl+K
+            </kbd>
+          </button>
+        )}
         {/* Real-time Cluster Pill */}
         {stats && (
           <div className="hidden lg:flex items-center gap-3 px-3 py-1.5 bg-[#111827] border border-slate-800 rounded-lg text-xs font-mono">

@@ -10,10 +10,27 @@ import {
   Server,
   Sparkles,
   PlugZap,
+  Share2,
+  AlertOctagon,
+  FileCode2,
+  Flame,
+  BellRing,
 } from 'lucide-react';
 import { ClusterStats, ConnectionConfig } from '../../lib/types';
 
-export type NavTab = 'cluster' | 'streams' | 'consumers' | 'kv' | 'objectstore' | 'studio' | 'tap';
+export type NavTab =
+  | 'cluster'
+  | 'topology'
+  | 'streams'
+  | 'consumers'
+  | 'kv'
+  | 'dlq'
+  | 'schemas'
+  | 'traffic'
+  | 'alerts'
+  | 'objectstore'
+  | 'studio'
+  | 'tap';
 
 interface SidebarProps {
   currentTab: NavTab;
@@ -24,6 +41,7 @@ interface SidebarProps {
   onOpenConnectModal: () => void;
   onStartDemo: () => void;
   isDemoLoading: boolean;
+  dlqCount?: number;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -35,9 +53,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onOpenConnectModal,
   onStartDemo,
   isDemoLoading,
+  dlqCount,
 }) => {
-  const navItems: { id: NavTab; label: string; icon: React.FC<{ className?: string }>; badge?: number }[] = [
+  const navItems: { id: NavTab; label: string; icon: React.FC<{ className?: string }>; badge?: number; badgeColor?: string }[] = [
     { id: 'cluster', label: 'Cluster Overview', icon: Activity },
+    { id: 'topology', label: 'Topology Graph', icon: Share2 },
     {
       id: 'streams',
       label: 'Streams & Subjects',
@@ -51,6 +71,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
       badge: stats?.jetstream?.consumersCount,
     },
     { id: 'kv', label: 'Key-Value Workbench', icon: Database },
+    {
+      id: 'dlq',
+      label: 'Poison Pill / DLQ',
+      icon: AlertOctagon,
+      badge: dlqCount,
+      badgeColor: 'bg-rose-500/20 text-rose-300 border-rose-500/30',
+    },
+    { id: 'schemas', label: 'Schema Registry', icon: FileCode2 },
+    { id: 'traffic', label: 'Traffic & Chaos Studio', icon: Flame },
+    { id: 'alerts', label: 'Alerts & Metrics', icon: BellRing },
     { id: 'objectstore', label: 'ObjectStore Explorer', icon: FolderArchive },
     { id: 'studio', label: 'Message Studio & Replay', icon: SendHorizontal },
     { id: 'tap', label: 'Live Tap & Probe', icon: Radio },

@@ -305,3 +305,167 @@ type TapMessage struct {
 	Timestamp time.Time           `json:"timestamp"`
 	Size      int                 `json:"size"`
 }
+
+// SchemaDefinition stores a schema bound to a subject pattern.
+type SchemaDefinition struct {
+	ID             string    `json:"id"`
+	Name           string    `json:"name"`
+	SubjectPattern string    `json:"subjectPattern"` // e.g. "orders.>" or "telemetry.*"
+	SchemaType     string    `json:"schemaType"`     // "json", "protobuf"
+	Content        string    `json:"content"`        // JSON schema or proto definition string
+	Description    string    `json:"description,omitempty"`
+	CreatedAt      time.Time `json:"createdAt"`
+	UpdatedAt      time.Time `json:"updatedAt"`
+}
+
+// ValidatePayloadRequest validates an arbitrary payload against matching schemas.
+type ValidatePayloadRequest struct {
+	Subject  string `json:"subject"`
+	Payload  string `json:"payload"`
+	SchemaID string `json:"schemaId,omitempty"`
+}
+
+// ValidatePayloadResponse reports validation errors and status.
+type ValidatePayloadResponse struct {
+	Valid          bool     `json:"valid"`
+	Errors         []string `json:"errors,omitempty"`
+	MatchedSchema  string   `json:"matchedSchema,omitempty"`
+	MatchedPattern string   `json:"matchedPattern,omitempty"`
+}
+
+// DLQMessage represents a poisoned or stuck message that exceeded redelivery thresholds.
+type DLQMessage struct {
+	ID            string              `json:"id"`
+	Stream        string              `json:"stream"`
+	Consumer      string              `json:"consumer"`
+	Sequence      uint64              `json:"sequence"`
+	Subject       string              `json:"subject"`
+	Timestamp     time.Time           `json:"timestamp"`
+	Payload       string              `json:"payload"`
+	PayloadType   string              `json:"payloadType"`
+	Headers       map[string][]string `json:"headers,omitempty"`
+	Redeliveries  int                 `json:"redeliveries"`
+	ErrorReason   string              `json:"errorReason"`
+	Status        string              `json:"status"` // "quarantined", "resolved", "republished"
+}
+
+// RepublishDLQRequest defines parameters to re-publish a quarantined message.
+type RepublishDLQRequest struct {
+	OriginalStream      string              `json:"originalStream"`
+	TargetSubject       string              `json:"targetSubject"`
+	Payload             string              `json:"payload"`
+	Headers             map[string][]string `json:"headers,omitempty"`
+	AcknowledgeOriginal bool                `json:"acknowledgeOriginal"`
+}
+
+// ChaosKnobs defines fault injection parameters for the traffic generator.
+type ChaosKnobs struct {
+	MalformedPayloadRatio float64 `json:"malformedPayloadRatio"` // 0.0 - 1.0
+	LatencyJitterMs       int     `json:"latencyJitterMs"`
+	InjectHeaderError     bool    `json:"injectHeaderError"`
+}
+
+// TrafficGeneratorConfig defines a synthetic load generator session.
+type TrafficGeneratorConfig struct {
+	ID              string     `json:"id"`
+	Name            string     `json:"name"`
+	TargetSubject   string     `json:"targetSubject"`
+	RatePerSec      int        `json:"ratePerSec"`      // e.g. 50
+	DurationSeconds int        `json:"durationSeconds"` // 0 = indefinite
+	TotalMessages   int        `json:"totalMessages"`   // 0 = indefinite
+	PayloadTemplate string     `json:"payloadTemplate"` // JSON template with {{uuid}}, {{now}}, {{random_int}}
+	Headers         map[string]string `json:"headers,omitempty"`
+	Chaos           ChaosKnobs `json:"chaos,omitempty"`
+}
+
+// TrafficGeneratorStatus reports runtime state of an active traffic session.
+type TrafficGeneratorStatus struct {
+	ID            string    `json:"id"`
+	Active        bool      `json:"active"`
+	SentMessages  uint64    `json:"sentMessages"`
+	TargetRate    int       `json:"targetRate"`
+	CurrentRate   float64   `json:"currentRate"`
+	ElapsedSec    float64   `json:"elapsedSec"`
+	TargetSubject string    `json:"targetSubject"`
+	LastError     string    `json:"lastError,omitempty"`
+	StartedAt     time.Time `json:"startedAt"`
+}
+
+// KVExportData is the serialized portable format of an entire KV bucket.
+type KVExportData struct {
+	Bucket     string        `json:"bucket"`
+	ExportedAt time.Time     `json:"exportedAt"`
+	Entries    []KVExportEntry `json:"entries"`
+}
+
+// KVExportEntry is a single key snapshot in a KV export.
+type KVExportEntry struct {
+	Key      string    `json:"key"`
+	Value    string    `json:"value"` // base64 or raw string
+	Revision uint64    `json:"revision"`
+	Created  time.Time `json:"created"`
+}
+
+// StreamExportData is a portable slice of stream messages.
+type StreamExportData struct {
+	Stream     string          `json:"stream"`
+	ExportedAt time.Time       `json:"exportedAt"`
+	FirstSeq   uint64          `json:"firstSeq"`
+	LastSeq    uint64          `json:"lastSeq"`
+	Count      int             `json:"count"`
+	Messages   []StreamMessage `json:"messages"`
+}
+
+// AlertRule defines an automated monitoring condition with webhook dispatch.
+type AlertRule struct {
+	ID              string    `json:"id"`
+	Name            string    `json:"name"`
+	Type            string    `json:"type"` // "consumer_lag", "redelivery_ratio", "stream_storage", "ack_wait"
+	TargetStream    string    `json:"targetStream,omitempty"`
+	TargetConsumer  string    `json:"targetConsumer,omitempty"`
+	Threshold       float64   `json:"threshold"`
+	DurationSeconds int       `json:"durationSeconds"`
+	WebhookURL      string    `json:"webhookUrl"`
+	ChannelType     string    `json:"channelType"` // "generic", "slack", "discord"
+	Enabled         bool      `json:"enabled"`
+	Status          string    `json:"status"` // "ok", "alerting"
+	LastTriggered   *time.Time `json:"lastTriggered,omitempty"`
+}
+
+// AlertEvent captures an incident notification sent by the alert engine.
+type AlertEvent struct {
+	ID        string    `json:"id"`
+	RuleID    string    `json:"ruleId"`
+	RuleName  string    `json:"ruleName"`
+	Timestamp time.Time `json:"timestamp"`
+	Severity  string    `json:"severity"` // "warning", "critical", "info"
+	Message   string    `json:"message"`
+	Resolved  bool      `json:"resolved"`
+}
+
+// TopologyNode represents an entity in the dataflow graph.
+type TopologyNode struct {
+	ID       string `json:"id"`
+	Label    string `json:"label"`
+	Type     string `json:"type"` // "ingress", "subject", "stream", "consumer", "worker"
+	Subtext  string `json:"subtext,omitempty"`
+	Status   string `json:"status"` // "normal", "active", "warning", "critical"
+	Rate     string `json:"rate,omitempty"`
+	Lag      uint64 `json:"lag,omitempty"`
+}
+
+// TopologyEdge represents a message flow path between entities.
+type TopologyEdge struct {
+	Source   string `json:"source"`
+	Target   string `json:"target"`
+	Label    string `json:"label,omitempty"`
+	Animated bool   `json:"animated"`
+	FlowRate string `json:"flowRate,omitempty"`
+	Status   string `json:"status"` // "normal", "warning", "critical"
+}
+
+// TopologyData contains nodes and edges for the visual topology diagram.
+type TopologyData struct {
+	Nodes []TopologyNode `json:"nodes"`
+	Edges []TopologyEdge `json:"edges"`
+}

@@ -15,9 +15,10 @@ import {
   Tag,
   AlertTriangle,
   Loader2,
+  Download,
 } from 'lucide-react';
 import { StreamDetail as IStreamDetail, StreamMessage, ConsumerSummary } from '../../lib/types';
-import { browseMessages, purgeStream, deleteStream, deleteMessage, fetchConsumers } from '../../lib/api';
+import { browseMessages, purgeStream, deleteStream, deleteMessage, fetchConsumers, exportStream } from '../../lib/api';
 import { formatBytes, formatNumber, formatDate } from '../../lib/utils';
 import { SubjectHierarchy } from './SubjectHierarchy';
 
@@ -119,6 +120,29 @@ export const StreamDetail: React.FC<StreamDetailProps> = ({
     }
   };
 
+  const [exportLoading, setExportLoading] = useState(false);
+
+  const handleExportStream = async () => {
+    setExportLoading(true);
+    try {
+      const data = await exportStream(stream.name, 500);
+      const jsonStr = JSON.stringify(data, null, 2);
+      const blob = new Blob([jsonStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `natslens-stream-${stream.name}-${Date.now()}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      alert('Stream export failed: ' + (err.message || err));
+    } finally {
+      setExportLoading(false);
+    }
+  };
+
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
       {/* Back button & Title */}
@@ -145,6 +169,17 @@ export const StreamDetail: React.FC<StreamDetailProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Export Stream Slice */}
+          <button
+            onClick={handleExportStream}
+            disabled={exportLoading}
+            className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors"
+            title="Export up to 500 stream messages to JSON"
+          >
+            <Download className="w-3.5 h-3.5 text-teal-400" />
+            <span>{exportLoading ? 'Exporting...' : 'Export Slice'}</span>
+          </button>
+
           <button
             onClick={handlePurge}
             disabled={actionLoading}

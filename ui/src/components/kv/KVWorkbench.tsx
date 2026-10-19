@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Database,
   Plus,
@@ -13,6 +13,8 @@ import {
   HardDrive,
   Save,
   Loader2,
+  Download,
+  Upload,
 } from 'lucide-react';
 import { KVBucketSummary, KVEntry } from '../../lib/types';
 import {
@@ -22,6 +24,8 @@ import {
   deleteKVKey,
   purgeKVKey,
   deleteKVBucket,
+  exportKVBucket,
+  importKVBucket,
 } from '../../lib/api';
 import { formatBytes, formatNumber, formatDate } from '../../lib/utils';
 import { CreateKVModal } from './CreateKVModal';
@@ -183,6 +187,56 @@ export const KVWorkbench: React.FC<KVWorkbenchProps> = ({ onRefreshStats }) => {
     }
   };
 
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [exportLoading, setExportLoading] = useState(false);
+  const [importLoading, setImportLoading] = useState(false);
+
+  const handleExport = async () => {
+    if (!selectedBucket) return;
+    setExportLoading(true);
+    try {
+      const data = await exportKVBucket(selectedBucket);
+      const jsonStr = JSON.stringify(data, null, 2);
+      const blob = new Blob([jsonStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `natslens-kv-${selectedBucket}-${Date.now()}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      alert('Export failed: ' + (err.message || err));
+    } finally {
+      setExportLoading(false);
+    }
+  };
+
+  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImportLoading(true);
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      if (!parsed.bucket || !Array.isArray(parsed.entries)) {
+        throw new Error('Invalid KV snapshot file format (requires "bucket" and "entries")');
+      }
+      const res = await importKVBucket(parsed.bucket, parsed);
+      alert(`Successfully imported ${res.importedKeys} keys into bucket ${parsed.bucket}`);
+      await loadBuckets();
+      setSelectedBucket(parsed.bucket);
+      await loadKeys(parsed.bucket);
+      onRefreshStats();
+    } catch (err: any) {
+      alert('Import failed: ' + (err.message || err));
+    } finally {
+      setImportLoading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
   const currentBucketMeta = buckets.find((b) => b.bucket === selectedBucket);
   const filteredKeys = keys.filter((k) =>
     k.key.toLowerCase().includes(keySearch.toLowerCase())
@@ -248,6 +302,35 @@ export const KVWorkbench: React.FC<KVWorkbenchProps> = ({ onRefreshStats }) => {
               Live Watch Stream
             </button>
           </div>
+
+          {/* Export JSON Button */}
+          <button
+            onClick={handleExport}
+            disabled={exportLoading || !selectedBucket}
+            className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg text-xs font-medium flex items-center gap-1.5 border border-slate-700 transition-colors"
+            title="Export bucket snapshot to JSON"
+          >
+            <Download className="w-3.5 h-3.5 text-teal-400" />
+            <span className="hidden md:inline">Export</span>
+          </button>
+
+          {/* Import JSON Button */}
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={importLoading}
+            className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg text-xs font-medium flex items-center gap-1.5 border border-slate-700 transition-colors"
+            title="Import bucket from JSON snapshot"
+          >
+            <Upload className="w-3.5 h-3.5 text-indigo-400" />
+            <span className="hidden md:inline">Import</span>
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".json,application/json"
+            className="hidden"
+            onChange={handleImportFile}
+          />
 
           <button
             onClick={handleDeleteBucket}

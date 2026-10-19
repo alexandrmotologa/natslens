@@ -12,6 +12,12 @@ import { KVWorkbench } from './components/kv/KVWorkbench';
 import { ObjectStoreExplorer } from './components/objectstore/ObjectStoreExplorer';
 import { MessageStudio } from './components/studio/MessageStudio';
 import { CoreNatsTap } from './components/studio/CoreNatsTap';
+import { TopologyGraph } from './components/topology/TopologyGraph';
+import { DLQWorkbench } from './components/dlq/DLQWorkbench';
+import { SchemaRegistry } from './components/schemas/SchemaRegistry';
+import { TrafficStudio } from './components/traffic/TrafficStudio';
+import { AlertsWorkbench } from './components/alerts/AlertsWorkbench';
+import { CommandPalette } from './components/layout/CommandPalette';
 
 import {
   ClusterStats,
@@ -19,6 +25,7 @@ import {
   StreamSummary,
   StreamDetail as IStreamDetail,
   ConsumerSummary,
+  KVBucketSummary,
 } from './lib/types';
 import {
   fetchClusterStats,
@@ -30,6 +37,8 @@ import {
   connectCluster,
   startDemoCluster,
   fetchConsumers,
+  fetchKVBuckets,
+  fetchDLQMessages,
 } from './lib/api';
 
 export const App: React.FC = () => {
@@ -39,18 +48,33 @@ export const App: React.FC = () => {
   const [isConnected, setIsConnected] = useState(false);
   const [streams, setStreams] = useState<StreamSummary[]>([]);
   const [consumers, setConsumers] = useState<ConsumerSummary[]>([]);
+  const [kvBuckets, setKvBuckets] = useState<KVBucketSummary[]>([]);
+  const [dlqCount, setDlqCount] = useState<number>(0);
   const [selectedStreamDetail, setSelectedStreamDetail] = useState<IStreamDetail | null>(null);
 
   // Modals
   const [isConnectModalOpen, setIsConnectModalOpen] = useState(false);
   const [isCreateStreamModalOpen, setIsCreateStreamModalOpen] = useState(false);
   const [isCreateConsumerModalOpen, setIsCreateConsumerModalOpen] = useState(false);
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
 
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isDemoLoading, setIsDemoLoading] = useState(false);
 
   useEffect(() => {
     loadInitialData();
+  }, []);
+
+  // Global Ctrl+K / Cmd+K Command Palette Shortcut
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setIsCommandPaletteOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
   // Poll cluster data every 4 seconds
@@ -95,6 +119,22 @@ export const App: React.FC = () => {
       }
       setConsumers(allConsumers);
 
+      // Load KV buckets for palette and workbench
+      try {
+        const buckets = await fetchKVBuckets();
+        setKvBuckets(buckets);
+      } catch {
+        // ignore
+      }
+
+      // Load DLQ message count for badge
+      try {
+        const dlqMsgs = await fetchDLQMessages();
+        setDlqCount(dlqMsgs.length);
+      } catch {
+        // ignore
+      }
+
       if (selectedStreamDetail) {
         try {
           const refreshedDetail = await fetchStream(selectedStreamDetail.name);
@@ -129,6 +169,20 @@ export const App: React.FC = () => {
         }
       }
       setConsumers(allConsumers);
+
+      try {
+        const buckets = await fetchKVBuckets();
+        setKvBuckets(buckets);
+      } catch {
+        // ignore
+      }
+
+      try {
+        const dlqMsgs = await fetchDLQMessages();
+        setDlqCount(dlqMsgs.length);
+      } catch {
+        // ignore
+      }
 
       if (selectedStreamDetail) {
         try {
@@ -200,6 +254,7 @@ export const App: React.FC = () => {
         onOpenConnectModal={() => setIsConnectModalOpen(true)}
         onStartDemo={handleStartDemo}
         isDemoLoading={isDemoLoading}
+        dlqCount={dlqCount}
       />
 
       {/* Main Content Area */}
@@ -209,6 +264,7 @@ export const App: React.FC = () => {
           stats={stats}
           onRefresh={refreshAllData}
           isRefreshing={isRefreshing}
+          onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
           primaryActionLabel={
             currentTab === 'streams' && !selectedStreamDetail
               ? '+ New Stream'
@@ -234,6 +290,13 @@ export const App: React.FC = () => {
                 setSelectedStreamDetail(null);
               }}
               onOpenConnect={() => setIsConnectModalOpen(true)}
+            />
+          )}
+
+          {currentTab === 'topology' && (
+            <TopologyGraph
+              onSelectStream={handleSelectStream}
+              onSelectConsumer={() => setCurrentTab('consumers')}
             />
           )}
 
@@ -265,6 +328,22 @@ export const App: React.FC = () => {
 
           {currentTab === 'kv' && (
             <KVWorkbench onRefreshStats={refreshAllData} />
+          )}
+
+          {currentTab === 'dlq' && (
+            <DLQWorkbench />
+          )}
+
+          {currentTab === 'schemas' && (
+            <SchemaRegistry />
+          )}
+
+          {currentTab === 'traffic' && (
+            <TrafficStudio />
+          )}
+
+          {currentTab === 'alerts' && (
+            <AlertsWorkbench />
           )}
 
           {currentTab === 'objectstore' && (
@@ -301,6 +380,23 @@ export const App: React.FC = () => {
         onClose={() => setIsCreateConsumerModalOpen(false)}
         streams={streams}
         onSubmit={handleCreateConsumer}
+      />
+
+      {/* Global Command Palette */}
+      <CommandPalette
+        isOpen={isCommandPaletteOpen}
+        onClose={() => setIsCommandPaletteOpen(false)}
+        onNavigate={(tab) => {
+          setCurrentTab(tab);
+          setSelectedStreamDetail(null);
+        }}
+        streams={streams}
+        kvBuckets={kvBuckets}
+        consumers={consumers}
+        onSelectStream={handleSelectStream}
+        onSelectKVBucket={() => {
+          setCurrentTab('kv');
+        }}
       />
     </div>
   );

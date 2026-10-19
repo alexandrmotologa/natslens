@@ -1,6 +1,7 @@
 package natsclient
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
@@ -19,6 +20,9 @@ type Client struct {
 	js     nats.JetStreamContext
 	config models.ConnectionConfig
 }
+
+// NATSClient is an alias for Client.
+type NATSClient = Client
 
 // NewClient creates an uninitialized Client.
 func NewClient() *Client {
@@ -206,3 +210,21 @@ func (c *Client) GetClusterStats() (*models.ClusterStats, error) {
 
 	return cs, nil
 }
+
+// ListAllConsumers returns all consumers across all streams in the cluster.
+func (c *Client) ListAllConsumers(ctx context.Context) ([]models.ConsumerSummary, error) {
+	streams, err := c.ListStreams(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	var all []models.ConsumerSummary
+	for _, s := range streams {
+		consumers, err := c.ListConsumers(ctx, s.Name)
+		if err == nil {
+			all = append(all, consumers...)
+		}
+	}
+	return all, nil
+}
+

@@ -16,16 +16,24 @@ import (
 
 // APIHandler wraps client and services for HTTP requests.
 type APIHandler struct {
-	Client        *natsclient.Client
-	ReplayManager *natsclient.ReplayManager
-	DemoServer    *embedded.DemoServer
+	Client         *natsclient.Client
+	ReplayManager  *natsclient.ReplayManager
+	DemoServer     *embedded.DemoServer
+	SchemaRegistry *natsclient.SchemaRegistry
+	DLQManager     *natsclient.DLQManager
+	TrafficEngine  *natsclient.TrafficEngine
+	AlertEngine    *natsclient.AlertEngine
 }
 
 // NewAPIHandler creates a new APIHandler.
 func NewAPIHandler(client *natsclient.Client, replayMgr *natsclient.ReplayManager) *APIHandler {
 	return &APIHandler{
-		Client:        client,
-		ReplayManager: replayMgr,
+		Client:         client,
+		ReplayManager:  replayMgr,
+		SchemaRegistry: natsclient.NewSchemaRegistry(),
+		DLQManager:     natsclient.NewDLQManager(client),
+		TrafficEngine:  natsclient.NewTrafficEngine(client),
+		AlertEngine:    natsclient.NewAlertEngine(client),
 	}
 }
 
@@ -859,3 +867,294 @@ func (h *APIHandler) TapSubject(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 }
+
+// GetTopology returns the dataflow graph for the current NATS & JetStream topology.
+func (h *APIHandler) GetTopology(w http.ResponseWriter, r *http.Request) {
+	topo, err := h.Client.BuildTopologyData(r.Context())
+	if err != nil {
+		WriteError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	WriteJSON(w, http.StatusOK, topo)
+}
+
+// ListSchemas returns all registered schema definitions.
+func (h *APIHandler) ListSchemas(w http.ResponseWriter, r *http.Request) {
+	schemas := h.SchemaRegistry.ListSchemas()
+	WriteJSON(w, http.StatusOK, schemas)
+}
+
+// SaveSchema creates or updates a schema definition.
+func (h *APIHandler) SaveSchema(w http.ResponseWriter, r *http.Request) {
+	var s models.SchemaDefinition
+	if err := json.NewDecoder(r.Body).Decode(&s); err != nil {
+		WriteError(w, http.StatusBadRequest, "invalid schema payload")
+		return
+	}
+	saved := h.SchemaRegistry.SaveSchema(s)
+	WriteJSON(w, http.StatusOK, saved)
+}
+
+// DeleteSchema removes a schema definition.
+func (h *APIHandler) DeleteSchema(w http.ResponseWriter, r *http.Request) {
+	parts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
+	if len(parts) < 3 {
+		WriteError(w, http.StatusBadRequest, "invalid schema path")
+		return
+	}
+	id := parts[2]
+	if !h.SchemaRegistry.DeleteSchema(id) {
+		WriteError(w, http.StatusNotFound, "schema not found")
+		return
+	}
+	WriteJSON(w, http.StatusOK, map[string]string{"message": "schema deleted"})
+}
+
+// ValidatePayload validates a payload against matching or specified schema.
+func (h *APIHandler) ValidatePayload(w http.ResponseWriter, r *http.Request) {
+	var req models.ValidatePayloadRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		WriteError(w, http.StatusBadRequest, "invalid validation request")
+		return
+	}
+	res := h.SchemaRegistry.ValidatePayload(req)
+	WriteJSON(w, http.StatusOK, res)
+}
+
+// ListDLQMessages returns all quarantined poison pills.
+func (h *APIHandler) ListDLQMessages(w http.ResponseWriter, r *http.Request) {
+	msgs := h.DLQManager.ListMessages()
+	WriteJSON(w, http.StatusOK, msgs)
+}
+
+// GetDLQMessage returns a single quarantined message.
+func (h *APIHandler) GetDLQMessage(w http.ResponseWriter, r *http.Request) {
+	parts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
+	if len(parts) < 3 {
+		WriteError(w, http.StatusBadRequest, "invalid dlq path")
+		return
+	}
+	id := parts[2]
+	msg, found := h.DLQManager.GetMessage(id)
+	if !found {
+		WriteError(w, http.StatusNotFound, "message not found in quarantine")
+		return
+	}
+	WriteJSON(w, http.StatusOK, msg)
+}
+
+// RepublishDLQ republishes a quarantined message and optionally acknowledges original.
+func (h *APIHandler) RepublishDLQ(w http.ResponseWriter, r *http.Request) {
+	parts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
+	if len(parts) < 4 {
+		WriteError(w, http.StatusBadRequest, "invalid dlq republish path")
+		return
+	}
+	id := parts[2]
+
+	var req models.RepublishDLQRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		WriteError(w, http.StatusBadRequest, "invalid republish payload")
+		return
+	}
+
+	if err := h.DLQManager.RepublishMessage(r.Context(), id, req); err != nil {
+		WriteError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	WriteJSON(w, http.StatusOK, map[string]string{"message": "message republished successfully"})
+}
+
+// PurgeDLQ removes a message from the quarantine registry.
+func (h *APIHandler) PurgeDLQ(w http.ResponseWriter, r *http.Request) {
+	parts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
+	if len(parts) < 3 {
+		WriteError(w, http.StatusBadRequest, "invalid dlq path")
+		return
+	}
+	id := parts[2]
+	if !h.DLQManager.PurgeMessage(id) {
+		WriteError(w, http.StatusNotFound, "message not found")
+		return
+	}
+	WriteJSON(w, http.StatusOK, map[string]string{"message": "quarantined message purged"})
+}
+
+// ScanDLQ scans streams for stuck messages or errors.
+func (h *APIHandler) ScanDLQ(w http.ResponseWriter, r *http.Request) {
+	count := h.DLQManager.ScanStreamsForPoisonPills(r.Context())
+	WriteJSON(w, http.StatusOK, map[string]interface{}{
+		"scanned":     true,
+		"discovered":  count,
+		"quarantined": h.DLQManager.QuarantinedCount(),
+	})
+}
+
+// StartTraffic launches a synthetic traffic generator session.
+func (h *APIHandler) StartTraffic(w http.ResponseWriter, r *http.Request) {
+	var cfg models.TrafficGeneratorConfig
+	if err := json.NewDecoder(r.Body).Decode(&cfg); err != nil {
+		WriteError(w, http.StatusBadRequest, "invalid traffic generator configuration")
+		return
+	}
+
+	sessID, err := h.TrafficEngine.StartSession(cfg)
+	if err != nil {
+		WriteError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	WriteJSON(w, http.StatusOK, map[string]string{"sessionId": sessID, "status": "running"})
+}
+
+// StopTraffic halts a running traffic session.
+func (h *APIHandler) StopTraffic(w http.ResponseWriter, r *http.Request) {
+	parts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
+	if len(parts) < 4 {
+		WriteError(w, http.StatusBadRequest, "invalid traffic stop path")
+		return
+	}
+	id := parts[2]
+	if !h.TrafficEngine.StopSession(id) {
+		WriteError(w, http.StatusNotFound, "session not active or not found")
+		return
+	}
+	WriteJSON(w, http.StatusOK, map[string]string{"message": "traffic session stopped"})
+}
+
+// ListTraffic returns all traffic generator sessions and statuses.
+func (h *APIHandler) ListTraffic(w http.ResponseWriter, r *http.Request) {
+	sessions := h.TrafficEngine.ListSessions()
+	WriteJSON(w, http.StatusOK, sessions)
+}
+
+// ExportKV exports an entire KV bucket to JSON.
+func (h *APIHandler) ExportKV(w http.ResponseWriter, r *http.Request) {
+	parts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
+	if len(parts) < 4 {
+		WriteError(w, http.StatusBadRequest, "invalid kv export path")
+		return
+	}
+	bucket := parts[2]
+
+	data, err := h.Client.ExportKVBucket(r.Context(), bucket)
+	if err != nil {
+		WriteError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s-kv-export.json", bucket))
+	WriteJSON(w, http.StatusOK, data)
+}
+
+// ImportKV imports a KV bucket from JSON.
+func (h *APIHandler) ImportKV(w http.ResponseWriter, r *http.Request) {
+	parts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
+	if len(parts) < 4 {
+		WriteError(w, http.StatusBadRequest, "invalid kv import path")
+		return
+	}
+	bucket := parts[2]
+
+	var data models.KVExportData
+	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
+		WriteError(w, http.StatusBadRequest, "invalid import JSON format")
+		return
+	}
+
+	count, err := h.Client.ImportKVBucket(r.Context(), bucket, data)
+	if err != nil {
+		WriteError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	WriteJSON(w, http.StatusOK, map[string]interface{}{"importedKeys": count, "bucket": bucket})
+}
+
+// ExportStream exports a message slice from a stream.
+func (h *APIHandler) ExportStream(w http.ResponseWriter, r *http.Request) {
+	parts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
+	if len(parts) < 4 {
+		WriteError(w, http.StatusBadRequest, "invalid stream export path")
+		return
+	}
+	stream := parts[2]
+
+	startSeq, _ := strconv.ParseUint(r.URL.Query().Get("startSeq"), 10, 64)
+	count, _ := strconv.Atoi(r.URL.Query().Get("count"))
+	if count <= 0 {
+		count = 200
+	}
+
+	data, err := h.Client.ExportStreamSlice(r.Context(), stream, startSeq, count)
+	if err != nil {
+		WriteError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s-stream-export.json", stream))
+	WriteJSON(w, http.StatusOK, data)
+}
+
+// PrometheusMetrics returns text-based Prometheus metrics for scraping.
+func (h *APIHandler) PrometheusMetrics(w http.ResponseWriter, r *http.Request) {
+	metrics := natsclient.FormatPrometheusMetrics(h.Client)
+	w.Header().Set("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write([]byte(metrics))
+}
+
+// ListAlertRules returns all alert rules.
+func (h *APIHandler) ListAlertRules(w http.ResponseWriter, r *http.Request) {
+	rules := h.AlertEngine.ListRules()
+	WriteJSON(w, http.StatusOK, rules)
+}
+
+// SaveAlertRule creates or updates an alert rule.
+func (h *APIHandler) SaveAlertRule(w http.ResponseWriter, r *http.Request) {
+	var rule models.AlertRule
+	if err := json.NewDecoder(r.Body).Decode(&rule); err != nil {
+		WriteError(w, http.StatusBadRequest, "invalid alert rule format")
+		return
+	}
+	saved := h.AlertEngine.SaveRule(rule)
+	WriteJSON(w, http.StatusOK, saved)
+}
+
+// DeleteAlertRule removes an alert rule.
+func (h *APIHandler) DeleteAlertRule(w http.ResponseWriter, r *http.Request) {
+	parts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
+	if len(parts) < 3 {
+		WriteError(w, http.StatusBadRequest, "invalid alert rule path")
+		return
+	}
+	id := parts[2]
+	if !h.AlertEngine.DeleteRule(id) {
+		WriteError(w, http.StatusNotFound, "rule not found")
+		return
+	}
+	WriteJSON(w, http.StatusOK, map[string]string{"message": "alert rule deleted"})
+}
+
+// ListAlertEvents returns recent incident notifications.
+func (h *APIHandler) ListAlertEvents(w http.ResponseWriter, r *http.Request) {
+	events := h.AlertEngine.ListEvents()
+	WriteJSON(w, http.StatusOK, events)
+}
+
+// TestWebhook sends a test notification to a webhook endpoint.
+func (h *APIHandler) TestWebhook(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		WebhookURL  string `json:"webhookUrl"`
+		ChannelType string `json:"channelType"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		WriteError(w, http.StatusBadRequest, "invalid test webhook request")
+		return
+	}
+
+	if err := h.AlertEngine.TestWebhook(body.WebhookURL, body.ChannelType); err != nil {
+		WriteError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	WriteJSON(w, http.StatusOK, map[string]string{"message": "webhook verified successfully"})
+}
+

@@ -19,6 +19,18 @@ import {
   StreamDetail,
   StreamMessage,
   StreamSummary,
+  TopologyData,
+  SchemaDefinition,
+  ValidatePayloadRequest,
+  ValidatePayloadResponse,
+  DLQMessage,
+  RepublishDLQRequest,
+  TrafficGeneratorConfig,
+  TrafficGeneratorStatus,
+  KVExportData,
+  StreamExportData,
+  AlertRule,
+  AlertEvent,
 } from './types';
 
 const BASE_URL = '/api';
@@ -317,6 +329,155 @@ export async function fetchReplayProgress(replayId: string): Promise<ReplayProgr
 export async function stopReplay(replayId: string): Promise<{ message: string }> {
   const res = await fetch(`${BASE_URL}/replay/${encodeURIComponent(replayId)}/stop`, {
     method: 'POST',
+  });
+  return handleResponse(res);
+}
+
+// Topology
+export async function fetchTopology(): Promise<TopologyData> {
+  const res = await fetch(`${BASE_URL}/topology`);
+  return handleResponse(res);
+}
+
+// Schema Registry
+export async function fetchSchemas(): Promise<SchemaDefinition[]> {
+  const res = await fetch(`${BASE_URL}/schemas`);
+  return handleResponse(res);
+}
+
+export async function createSchema(schema: Partial<SchemaDefinition>): Promise<SchemaDefinition> {
+  const res = await fetch(`${BASE_URL}/schemas`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(schema),
+  });
+  return handleResponse(res);
+}
+
+export async function deleteSchema(id: string): Promise<{ message: string }> {
+  const res = await fetch(`${BASE_URL}/schemas/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+  });
+  return handleResponse(res);
+}
+
+export async function validatePayload(req: ValidatePayloadRequest): Promise<ValidatePayloadResponse> {
+  const res = await fetch(`${BASE_URL}/schemas/validate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(req),
+  });
+  return handleResponse(res);
+}
+
+// DLQ & Poison Pills
+export async function fetchDLQMessages(): Promise<DLQMessage[]> {
+  const res = await fetch(`${BASE_URL}/dlq`);
+  return handleResponse(res);
+}
+
+export async function getDLQMessage(id: string): Promise<DLQMessage> {
+  const res = await fetch(`${BASE_URL}/dlq/${encodeURIComponent(id)}`);
+  return handleResponse(res);
+}
+
+export async function republishDLQMessage(id: string, req: RepublishDLQRequest): Promise<{ message: string }> {
+  const res = await fetch(`${BASE_URL}/dlq/${encodeURIComponent(id)}/republish`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(req),
+  });
+  return handleResponse(res);
+}
+
+export async function purgeDLQMessage(id: string): Promise<{ message: string }> {
+  const res = await fetch(`${BASE_URL}/dlq/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+  });
+  return handleResponse(res);
+}
+
+export async function scanDLQ(): Promise<{ scanned: boolean; discovered: number; quarantined: number }> {
+  const res = await fetch(`${BASE_URL}/dlq/scan`, {
+    method: 'POST',
+  });
+  return handleResponse(res);
+}
+
+// Traffic Studio
+export async function startTraffic(cfg: TrafficGeneratorConfig): Promise<{ sessionId: string; status: string }> {
+  const res = await fetch(`${BASE_URL}/traffic/start`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(cfg),
+  });
+  return handleResponse(res);
+}
+
+export async function stopTraffic(id: string): Promise<{ message: string }> {
+  const res = await fetch(`${BASE_URL}/traffic/${encodeURIComponent(id)}/stop`, {
+    method: 'POST',
+  });
+  return handleResponse(res);
+}
+
+export async function fetchTrafficSessions(): Promise<TrafficGeneratorStatus[]> {
+  const res = await fetch(`${BASE_URL}/traffic/sessions`);
+  return handleResponse(res);
+}
+
+// Export & Import
+export async function exportKVBucket(bucket: string): Promise<KVExportData> {
+  const res = await fetch(`${BASE_URL}/kv/${encodeURIComponent(bucket)}/export`);
+  return handleResponse(res);
+}
+
+export async function importKVBucket(bucket: string, data: KVExportData): Promise<{ importedKeys: number; bucket: string }> {
+  const res = await fetch(`${BASE_URL}/kv/${encodeURIComponent(bucket)}/import`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  return handleResponse(res);
+}
+
+export async function exportStream(stream: string, startSeq = 1, count = 200): Promise<StreamExportData> {
+  const res = await fetch(`${BASE_URL}/streams/${encodeURIComponent(stream)}/export?startSeq=${startSeq}&count=${count}`);
+  return handleResponse(res);
+}
+
+// Alerts & Webhooks
+export async function fetchAlertRules(): Promise<AlertRule[]> {
+  const res = await fetch(`${BASE_URL}/alerts/rules`);
+  return handleResponse(res);
+}
+
+export async function createAlertRule(rule: Partial<AlertRule>): Promise<AlertRule> {
+  const res = await fetch(`${BASE_URL}/alerts/rules`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(rule),
+  });
+  return handleResponse(res);
+}
+
+export async function deleteAlertRule(id: string): Promise<{ message: string }> {
+  const res = await fetch(`${BASE_URL}/alerts/rules/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+  });
+  return handleResponse(res);
+}
+
+export async function fetchAlertEvents(): Promise<AlertEvent[]> {
+  const res = await fetch(`${BASE_URL}/alerts/events`);
+  return handleResponse(res);
+}
+
+export async function testWebhook(webhookUrl: string, channelType: string): Promise<{ message: string }> {
+  const res = await fetch(`${BASE_URL}/alerts/test`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ webhookUrl, channelType }),
   });
   return handleResponse(res);
 }

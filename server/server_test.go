@@ -158,4 +158,105 @@ func TestServerEndpoints(t *testing.T) {
 			t.Errorf("Expected sequence > 0")
 		}
 	})
+
+	// 6. Topology Graph
+	t.Run("TopologyEndpoint", func(t *testing.T) {
+		resp, err := client.Get(baseURL + "/api/topology")
+		if err != nil {
+			t.Fatalf("GET /api/topology error: %v", err)
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			t.Errorf("Expected status 200, got %d", resp.StatusCode)
+		}
+		var topo models.TopologyData
+		_ = json.NewDecoder(resp.Body).Decode(&topo)
+		if len(topo.Nodes) == 0 {
+			t.Errorf("Expected topology nodes")
+		}
+	})
+
+	// 7. Schema Registry
+	t.Run("SchemaRegistryEndpoints", func(t *testing.T) {
+		resp, err := client.Get(baseURL + "/api/schemas")
+		if err != nil {
+			t.Fatalf("GET /api/schemas error: %v", err)
+		}
+		defer resp.Body.Close()
+		var schemas []models.SchemaDefinition
+		_ = json.NewDecoder(resp.Body).Decode(&schemas)
+		if len(schemas) == 0 {
+			t.Errorf("Expected seeded schemas")
+		}
+
+		// Validate payload
+		valReq := models.ValidatePayloadRequest{
+			Subject: "orders.created",
+			Payload: `{"orderId":"ord-1","customerId":"c1","amount":10,"status":"OK"}`,
+		}
+		b, _ := json.Marshal(valReq)
+		valResp, err := client.Post(baseURL+"/api/schemas/validate", "application/json", bytes.NewReader(b))
+		if err != nil {
+			t.Fatalf("POST /api/schemas/validate error: %v", err)
+		}
+		defer valResp.Body.Close()
+		var res models.ValidatePayloadResponse
+		_ = json.NewDecoder(valResp.Body).Decode(&res)
+		if !res.Valid {
+			t.Errorf("Expected validation success, got: %v", res.Errors)
+		}
+	})
+
+	// 8. DLQ & Poison Pills
+	t.Run("DLQEndpoints", func(t *testing.T) {
+		resp, err := client.Get(baseURL + "/api/dlq")
+		if err != nil {
+			t.Fatalf("GET /api/dlq error: %v", err)
+		}
+		defer resp.Body.Close()
+		var msgs []models.DLQMessage
+		_ = json.NewDecoder(resp.Body).Decode(&msgs)
+		if len(msgs) == 0 {
+			t.Errorf("Expected seeded DLQ messages")
+		}
+	})
+
+	// 9. Traffic Sessions
+	t.Run("TrafficEndpoints", func(t *testing.T) {
+		resp, err := client.Get(baseURL + "/api/traffic/sessions")
+		if err != nil {
+			t.Fatalf("GET /api/traffic/sessions error: %v", err)
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			t.Errorf("Expected status 200, got %d", resp.StatusCode)
+		}
+	})
+
+	// 10. Alerts
+	t.Run("AlertsEndpoints", func(t *testing.T) {
+		resp, err := client.Get(baseURL + "/api/alerts/rules")
+		if err != nil {
+			t.Fatalf("GET /api/alerts/rules error: %v", err)
+		}
+		defer resp.Body.Close()
+		var rules []models.AlertRule
+		_ = json.NewDecoder(resp.Body).Decode(&rules)
+		if len(rules) == 0 {
+			t.Errorf("Expected seeded alert rules")
+		}
+	})
+
+	// 11. Prometheus Metrics
+	t.Run("PrometheusEndpoint", func(t *testing.T) {
+		resp, err := client.Get(baseURL + "/metrics")
+		if err != nil {
+			t.Fatalf("GET /metrics error: %v", err)
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			t.Errorf("Expected status 200, got %d", resp.StatusCode)
+		}
+	})
 }
+

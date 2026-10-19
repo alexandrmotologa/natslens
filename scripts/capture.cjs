@@ -123,23 +123,52 @@ async function run() {
   console.log('Capturing Key-Value Workbench (natslens-4.png)...');
   await page.screenshot({ path: path.join(targetDir, 'natslens-4.png'), fullPage: false });
 
-  // --- TAB 5: Message Studio & Replay (natslens-5.png) ---
-  console.log('Navigating to Message Studio & Replay...');
-  await clickTab(page, 'Message Studio & Replay');
-  await new Promise((r) => setTimeout(r, 1200));
-
-  // Switch to Stream Replay tab inside studio
-  const studioTabs = await page.$$('button');
-  for (const btn of studioTabs) {
-    const text = await page.evaluate(el => el.textContent, btn);
-    if (text && text.includes('Stream Replay')) {
-      await btn.click();
-      break;
-    }
-  }
-  await new Promise((r) => setTimeout(r, 1000));
-  console.log('Capturing Message Studio & Replay (natslens-5.png)...');
+  // --- TAB 5: Visual Topology Graph (natslens-5.png) ---
+  console.log('Navigating to Topology Graph...');
+  await clickTab(page, 'Topology Graph');
+  await new Promise((r) => setTimeout(r, 1500));
+  console.log('Capturing Topology Graph (natslens-5.png)...');
   await page.screenshot({ path: path.join(targetDir, 'natslens-5.png'), fullPage: false });
+
+  // --- TAB 6: Poison Pill / DLQ (natslens-6.png) ---
+  console.log('Navigating to Poison Pill / DLQ...');
+  await clickTab(page, 'Poison Pill / DLQ');
+  await new Promise((r) => setTimeout(r, 1200));
+  console.log('Capturing Poison Pill DLQ Workbench (natslens-6.png)...');
+  await page.screenshot({ path: path.join(targetDir, 'natslens-6.png'), fullPage: false });
+
+  // --- TAB 7: Schema Registry (natslens-7.png) ---
+  console.log('Navigating to Schema Registry...');
+  await clickTab(page, 'Schema Registry');
+  await new Promise((r) => setTimeout(r, 1200));
+  console.log('Capturing Schema Registry & Validator (natslens-7.png)...');
+  await page.screenshot({ path: path.join(targetDir, 'natslens-7.png'), fullPage: false });
+
+  // --- TAB 8: Traffic & Chaos Studio (natslens-8.png) ---
+  console.log('Navigating to Traffic & Chaos Studio...');
+  await clickTab(page, 'Traffic & Chaos Studio');
+  await new Promise((r) => setTimeout(r, 1200));
+  console.log('Capturing Traffic & Chaos Studio (natslens-8.png)...');
+  await page.screenshot({ path: path.join(targetDir, 'natslens-8.png'), fullPage: false });
+
+  // --- TAB 9: Alerts & Metrics (natslens-9.png) ---
+  console.log('Navigating to Alerts & Metrics...');
+  await clickTab(page, 'Alerts & Metrics');
+  await new Promise((r) => setTimeout(r, 1200));
+  console.log('Capturing Alerts & Metrics (natslens-9.png)...');
+  await page.screenshot({ path: path.join(targetDir, 'natslens-9.png'), fullPage: false });
+
+  // --- MODAL: Command Palette (Ctrl+K) (natslens-10.png) ---
+  console.log('Triggering Command Palette (Ctrl+K)...');
+  await page.keyboard.down('Control');
+  await page.keyboard.press('KeyK');
+  await page.keyboard.up('Control');
+  await new Promise((r) => setTimeout(r, 800));
+  console.log('Capturing Command Palette (natslens-10.png)...');
+  await page.screenshot({ path: path.join(targetDir, 'natslens-10.png'), fullPage: false });
+  // Close palette
+  await page.keyboard.press('Escape');
+  await new Promise((r) => setTimeout(r, 500));
 
   // --- 6. RECORDING ANIMATED DEMO FRAMES FOR GIF ---
   console.log('Recording sequence of frames for natslens_demo.gif...');
@@ -147,6 +176,7 @@ async function run() {
 
   const demoTour = [
     { name: 'Cluster Overview', action: async () => { await clickTab(page, 'Cluster Overview'); } },
+    { name: 'Topology Graph', action: async () => { await clickTab(page, 'Topology Graph'); } },
     { name: 'Streams Overview', action: async () => { await clickTab(page, 'Streams & Subjects'); } },
     { name: 'Stream Detail (ORDERS)', action: async () => {
       const cards = await page.$$('div.cursor-pointer');
@@ -164,16 +194,18 @@ async function run() {
     } },
     { name: 'Consumer Lag & Heatmap', action: async () => { await clickTab(page, 'Consumer Lag & Heatmap'); } },
     { name: 'KV Workbench', action: async () => { await clickTab(page, 'Key-Value Workbench'); } },
-    { name: 'ObjectStore Explorer', action: async () => { await clickTab(page, 'ObjectStore Explorer'); } },
+    { name: 'Poison Pill DLQ', action: async () => { await clickTab(page, 'Poison Pill / DLQ'); } },
+    { name: 'Schema Registry', action: async () => { await clickTab(page, 'Schema Registry'); } },
+    { name: 'Traffic & Chaos Studio', action: async () => { await clickTab(page, 'Traffic & Chaos Studio'); } },
+    { name: 'Alerts & Metrics', action: async () => { await clickTab(page, 'Alerts & Metrics'); } },
     { name: 'Message Studio', action: async () => { await clickTab(page, 'Message Studio & Replay'); } },
-    { name: 'Stream Replay Engine', action: async () => {
-      const btns = await page.$$('button');
-      for (const b of btns) {
-        const text = await page.evaluate(el => el.textContent, b);
-        if (text && text.includes('Stream Replay')) { await b.click(); break; }
-      }
-    } },
     { name: 'Live Tap & Probe', action: async () => { await clickTab(page, 'Live Tap & Probe'); } },
+    { name: 'Command Palette', action: async () => {
+      await page.keyboard.down('Control');
+      await page.keyboard.press('KeyK');
+      await page.keyboard.up('Control');
+      await new Promise((r) => setTimeout(r, 600));
+    } },
   ];
 
   for (const step of demoTour) {
@@ -181,12 +213,16 @@ async function run() {
     await step.action();
     await new Promise((r) => setTimeout(r, 800));
 
-    // Capture 3 frames per step with small intervals to capture animations/live traffic
+    // Capture 3 frames per step
     for (let f = 0; f < 3; f++) {
       const framePath = path.join(framesDir, `frame_${String(frameIdx).padStart(4, '0')}.png`);
       await page.screenshot({ path: framePath, fullPage: false });
       frameIdx++;
       await new Promise((r) => setTimeout(r, 250));
+    }
+
+    if (step.name === 'Command Palette') {
+      await page.keyboard.press('Escape');
     }
   }
 
